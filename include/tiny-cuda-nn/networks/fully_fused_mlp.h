@@ -31,16 +31,17 @@
 
 #pragma once
 
-#include <tiny-cuda-nn/common.h>
-#include <tiny-cuda-nn/network.h>
-#include <tiny-cuda-nn/gpu_matrix.h>
-#include <tiny-cuda-nn/gpu_memory.h>
+#include "../common.h"
+#include "../network.h"
+#include "../gpu_matrix.h"
+#include "../gpu_memory.h"
+#include "../matrix_layout.h"
 
 #include <vector>
 
 TCNN_NAMESPACE_BEGIN
 
-template <typename T, int WIDTH>
+template <typename T /*half*/, int WIDTH /*width of hidden layers*/>
 class FullyFusedMLP : public Network<T> {
 public:
 	FullyFusedMLP(uint32_t input_width, uint32_t output_width, uint32_t n_hidden_layers, bool use_feedback_alignment, Activation activation, Activation output_activation);

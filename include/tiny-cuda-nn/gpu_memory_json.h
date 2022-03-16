@@ -31,6 +31,7 @@
 #pragma once
 
 #include <json/json.hpp>
+#include <tiny-cuda-nn/common.h>
 
 TCNN_NAMESPACE_BEGIN
 

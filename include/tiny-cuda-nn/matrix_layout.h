@@ -30,7 +30,7 @@
 
 #pragma once
 
-#include <tiny-cuda-nn/common.h>
+#include "common.h"
 
 TCNN_NAMESPACE_BEGIN
 

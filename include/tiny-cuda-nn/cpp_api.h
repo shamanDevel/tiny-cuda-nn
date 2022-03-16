@@ -34,6 +34,7 @@
 
 #include <memory>
 #include <string>
+#include <cuda_runtime.h>
 
 namespace tcnn {
 	struct Context {

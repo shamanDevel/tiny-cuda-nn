@@ -30,8 +30,9 @@
 
 #pragma once
 
-#include <tiny-cuda-nn/common.h>
-#include <tiny-cuda-nn/object.h>
+#include "common.h"
+#include "matrix_layout.h"
+#include "object.h"
 
 TCNN_NAMESPACE_BEGIN
 

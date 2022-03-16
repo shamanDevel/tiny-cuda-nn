@@ -28,14 +28,14 @@
  *  @brief  API interface of a neural network implementation
  */
 
-#include <tiny-cuda-nn/common_device.h>
-#include <tiny-cuda-nn/network.h>
-
-#include <tiny-cuda-nn/networks/cutlass_mlp.h>
-#include <tiny-cuda-nn/networks/cutlass_resnet.h>
+#include "../include/tiny-cuda-nn/common.h"
+#include "../include/tiny-cuda-nn/common_device.h"
+#include "../include/tiny-cuda-nn/network.h"
+#include "../include/tiny-cuda-nn/networks/cutlass_mlp.h"
+#include "../include/tiny-cuda-nn/networks/cutlass_resnet.h"
 
 #if TCNN_MIN_GPU_ARCH >= 70
-#include <tiny-cuda-nn/networks/fully_fused_mlp.h>
+#include "../include/tiny-cuda-nn/networks/fully_fused_mlp.h"
 #endif
 
 TCNN_NAMESPACE_BEGIN

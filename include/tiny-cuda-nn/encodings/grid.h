@@ -32,13 +32,13 @@
 
 #pragma once
 
-#include <tiny-cuda-nn/common.h>
-#include <tiny-cuda-nn/common_device.h>
-#include <tiny-cuda-nn/encoding.h>
-#include <tiny-cuda-nn/encodings/oneblob.h>
-#include <tiny-cuda-nn/gpu_memory.h>
-#include <tiny-cuda-nn/multi_stream.h>
-#include <tiny-cuda-nn/random.h>
+#include "../common.h"
+#include "../common_device.h"
+#include "../encoding.h"
+#include "../encodings/oneblob.h"
+#include "../gpu_memory.h"
+#include "../multi_stream.h"
+#include "../random.h"
 
 #include <stdexcept>
 #include <stdint.h>

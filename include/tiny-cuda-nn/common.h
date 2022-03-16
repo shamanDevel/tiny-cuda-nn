@@ -35,17 +35,23 @@
 #define TCNN_NAMESPACE_BEGIN namespace tcnn {
 #define TCNN_NAMESPACE_END }
 
-#include <tiny-cuda-nn/cpp_api.h>
+#include "cpp_api.h"
 
 #include <array>
 #include <iostream>
 #include <sstream>
 #include <stdexcept>
 #include <string>
+#include <functional>
+#include <cuda_runtime.h>
 
 #include <cuda_fp16.h>
 
 TCNN_NAMESPACE_BEGIN
+
+#ifndef TCNN_MIN_GPU_ARCH
+#define TCNN_MIN_GPU_ARCH 75 //IntelliSense
+#endif
 
 static constexpr uint32_t MIN_GPU_ARCH = TCNN_MIN_GPU_ARCH;
 

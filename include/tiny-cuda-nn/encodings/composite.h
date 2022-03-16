@@ -31,11 +31,11 @@
 
 #pragma once
 
-#include <tiny-cuda-nn/common.h>
-#include <tiny-cuda-nn/encoding.h>
-#include <tiny-cuda-nn/gpu_memory.h>
-#include <tiny-cuda-nn/common_device.h>
-#include <tiny-cuda-nn/multi_stream.h>
+#include "../common.h"
+#include "../encoding.h"
+#include "../gpu_memory.h"
+#include "../common_device.h"
+#include "../multi_stream.h"
 
 #include <numeric>
 #include <stdexcept>

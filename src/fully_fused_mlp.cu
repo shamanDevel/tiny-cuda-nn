@@ -29,11 +29,14 @@
  *          and simultaneous inference.
  */
 
-#include <tiny-cuda-nn/networks/fully_fused_mlp.h>
+#include "../include/tiny-cuda-nn/networks/fully_fused_mlp.h"
 
-#include <tiny-cuda-nn/cutlass_matmul.h>
-#include <tiny-cuda-nn/common_device.h>
+#include "../include/tiny-cuda-nn/cutlass_matmul.h"
+#include "../include/tiny-cuda-nn/common_device.h"
 
+#ifdef __INTELLISENSE__ 
+#define __CUDACC__
+#endif
 #include <mma.h>
 
 TCNN_NAMESPACE_BEGIN

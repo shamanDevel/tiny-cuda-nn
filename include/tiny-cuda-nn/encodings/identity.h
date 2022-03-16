@@ -30,10 +30,11 @@
 
 #pragma once
 
-#include <tiny-cuda-nn/common.h>
-#include <tiny-cuda-nn/encoding.h>
-#include <tiny-cuda-nn/gpu_memory.h>
-#include <tiny-cuda-nn/common_device.h>
+#include "../common.h"
+#include "../encoding.h"
+#include "../gpu_memory.h"
+#include "../common_device.h"
+#include "../matrix_layout.h"
 
 #include <numeric>
 #include <stdexcept>
