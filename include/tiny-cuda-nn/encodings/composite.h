@@ -56,9 +56,24 @@ public:
 
 		const json::array_t& nested = params["nested"];
 
-		uint32_t total_nested_dims_to_encode = 0;
+		int total_nested_dims_to_encode = 0;
 		for (size_t i = 0; i < nested.size(); ++i) {
-			total_nested_dims_to_encode += nested[i].value("n_dims_to_encode", 0);
+			if (nested[i].contains("n_dims_to_encode")) {
+				auto v = nested[i]["n_dims_to_encode"];
+				if (v.is_array())
+				{
+					if (v.size() != 2)
+						throw std::runtime_error{ "n_dims_to_encode specified as array, indicating [min,max], but a different number than 2 entries are given" };
+					int min = v[0].get<int>();
+					int max = v[1].get<int>();
+					if (min < 0) throw std::runtime_error{ "Illegal slice, min must be >= 0" };
+					if (max <= min) throw std::runtime_error{ "Illegal slice, max > min required" };
+					total_nested_dims_to_encode = std::max(total_nested_dims_to_encode, max);
+				} else
+				{
+					total_nested_dims_to_encode += v.get<int>();
+				}
+			}
 		}
 
 		if (total_nested_dims_to_encode > n_dims_to_encode) {
@@ -68,34 +83,50 @@ public:
 		uint32_t unspecified_dims_to_encode = n_dims_to_encode - total_nested_dims_to_encode;
 
 		// Create encodings with somewhat arbitrary alignment
+		int encode_start = 0;
 		for (size_t i = 0; i < nested.size(); ++i) {
-			uint32_t nested_dims_to_encode;
+			int encode_min, encode_max;
 			if (nested[i].contains("n_dims_to_encode")) {
-				nested_dims_to_encode = nested[i]["n_dims_to_encode"];
+				auto v = nested[i]["n_dims_to_encode"];
+				if (v.is_array())
+				{
+					encode_min = v[0].get<int>();
+					encode_max = v[1].get<int>();
+				} else
+				{
+					encode_min = encode_start;
+					encode_max = encode_start + v.get<int>();
+				}
 			} else {
 				if (unspecified_dims_to_encode == 0xFFFFFFFF) {
 					throw std::runtime_error{"CompositeEncoding: may only leave 'n_dims_to_encode' unspecified for a single nested encoding"};
 				}
-				nested_dims_to_encode = unspecified_dims_to_encode;
+				encode_min = encode_start;
+				encode_max = encode_start + unspecified_dims_to_encode;
 				unspecified_dims_to_encode = 0xFFFFFFFF;
 			}
+			encode_start = encode_max;
 
+			auto nested_dims_to_encode = encode_max - encode_min;
 			if (nested_dims_to_encode > 0) {
-				m_nested.emplace_back(create_encoding<T>(nested_dims_to_encode, nested[i], 1));
+				m_nested.push_back(Nested{
+					std::unique_ptr<Encoding<T>>(create_encoding<T>(nested_dims_to_encode, nested[i], 1)),
+					encode_min, nested_dims_to_encode
+					});
 			}
 		}
 
 		// Fix alignment such that min_alignment of each individual encoding's output is ensured
 		uint32_t dims_encoded_so_far = 0;
 		for (size_t i = 0; i < m_nested.size()-1; ++i) {
-			uint32_t desired_alignment = m_nested[i+1]->min_alignment();
+			uint32_t desired_alignment = m_nested[i+1].nested->min_alignment();
 			uint32_t effective_alignmen_needed = next_multiple(dims_encoded_so_far, desired_alignment) - dims_encoded_so_far;
 
 			if (effective_alignmen_needed > 0) {
-				m_nested[i]->set_alignment(effective_alignmen_needed);
+				m_nested[i].nested->set_alignment(effective_alignmen_needed);
 			}
 
-			dims_encoded_so_far += m_nested[i]->padded_output_width();
+			dims_encoded_so_far += m_nested[i].nested->padded_output_width();
 		}
 	}
 
@@ -115,28 +146,28 @@ public:
 
 		SyncedMultiStream synced_streams{stream, m_nested.size()};
 
-		uint32_t input_offset = 0;
+		//uint32_t input_offset = 0;
 		uint32_t output_offset = 0;
 
 		for (size_t i = 0; i < m_nested.size(); ++i) {
 			const auto& nested = m_nested[i];
-			uint32_t input_width = nested->input_width();
-			uint32_t output_width = nested->output_width();
+			//uint32_t input_width = nested->input_width();
+			uint32_t output_width = nested.nested->output_width();
 
 			GPUMatrixDynamic<T> sliced_output;
 			if (output) {
 				sliced_output = output->slice_rows(output_offset, output_width);
 			}
 
-			forward->nested[i] = nested->forward(
+			forward->nested[i] = nested.nested->forward(
 				stream,
-				input.slice_rows(input_offset, input_width),
+				input.slice_rows(nested.dim_start, nested.num_dim), //input.slice_rows(input_offset, input_width),
 				output ? &sliced_output : nullptr,
 				use_inference_params,
 				prepare_input_gradients
 			);
 
-			input_offset += input_width;
+			//input_offset += input_width;
 			output_offset += output_width;
 		}
 
@@ -164,23 +195,23 @@ public:
 
 		SyncedMultiStream synced_streams{stream, m_nested.size()};
 
-		uint32_t input_offset = 0;
+		//uint32_t input_offset = 0;
 		uint32_t output_offset = 0;
 
 		for (size_t i = 0; i < m_nested.size(); ++i) {
 			const auto& nested = m_nested[i];
-			uint32_t input_width = nested->input_width();
-			uint32_t output_width = nested->output_width();
+			//uint32_t input_width = nested->input_width();
+			uint32_t output_width = nested.nested->output_width();
 
 			GPUMatrixDynamic<float> sliced_dL_dinput;
 			if (dL_dinput) {
-				sliced_dL_dinput = dL_dinput->slice_rows(input_offset, input_width);
+				sliced_dL_dinput = dL_dinput->slice_rows(nested.dim_start, nested.num_dim); //dL_dinput->slice_rows(input_offset, input_width);
 			}
 
-			nested->backward(
+			nested.nested->backward(
 				synced_streams.get(i),
 				*forward.nested[i],
-				input.slice_rows(input_offset, input_width),
+				input.slice_rows(nested.dim_start, nested.num_dim), //input.slice_rows(input_offset, input_width),
 				output.slice_rows(output_offset, output_width),
 				dL_doutput.slice_rows(output_offset, output_width),
 				dL_dinput ? &sliced_dL_dinput : nullptr,
@@ -188,7 +219,7 @@ public:
 				param_gradients_mode
 			);
 
-			input_offset += input_width;
+			//input_offset += input_width;
 			output_offset += output_width;
 		}
 	}
@@ -200,7 +231,7 @@ public:
 	uint32_t padded_output_width() const override {
 		uint32_t total = 0;
 		for (const auto& nested : m_nested) {
-			total += nested->padded_output_width();
+			total += nested.nested->padded_output_width();
 		}
 		return total;
 	}
@@ -208,7 +239,7 @@ public:
 	uint32_t output_width() const override {
 		uint32_t total = 0;
 		for (const auto& nested : m_nested) {
-			total += nested->output_width();
+			total += nested.nested->output_width();
 		}
 		return total;
 	}
@@ -219,10 +250,10 @@ public:
 
 	void set_alignment(uint32_t alignment) override {
 		uint32_t n_dims = padded_output_width();
-		uint32_t last_n_dims = m_nested.back()->padded_output_width();
+		uint32_t last_n_dims = m_nested.back().nested->padded_output_width();
 
 		uint32_t desired_n_dims = next_multiple(n_dims, alignment);
-		m_nested.back()->set_alignment(desired_n_dims - (n_dims - last_n_dims));
+		m_nested.back().nested->set_alignment(desired_n_dims - (n_dims - last_n_dims));
 	}
 
 	uint32_t min_alignment() const override {
@@ -233,7 +264,7 @@ public:
 		// Only supports layout if all nested encodings do
 		bool result = true;
 		for (const auto& nested : m_nested) {
-			result &= nested->supports_output_layout(layout);
+			result &= nested.nested->supports_output_layout(layout);
 		}
 
 		return result;
@@ -242,7 +273,7 @@ public:
 	MatrixLayout preferred_output_layout() const override {
 		// All encodings support AoS, so if any prefers AoS, use that.
 		for (const auto& nested : m_nested) {
-			if (nested->preferred_output_layout() == AoS) {
+			if (nested.nested->preferred_output_layout() == AoS) {
 				return AoS;
 			}
 		}
@@ -253,7 +284,7 @@ public:
 	void initialize_params(pcg32& rnd, float* params_full_precision, T* params, T* inference_params, T* backward_params, T* gradients, float scale = 1) override {
 		size_t offset = 0;
 		for (auto& nested : m_nested) {
-			nested->initialize_params(
+			nested.nested->initialize_params(
 				rnd,
 				params_full_precision + offset,
 				params + offset,
@@ -262,14 +293,14 @@ public:
 				gradients + offset,
 				scale
 			);
-			offset += nested->n_params();
+			offset += nested.nested->n_params();
 		}
 	}
 
 	size_t n_params() const override {
 		size_t total = 0;
 		for (const auto& nested : m_nested) {
-			total += nested->n_params();
+			total += nested.nested->n_params();
 		}
 		return total;
 	}
@@ -277,7 +308,8 @@ public:
 	json hyperparams() const override {
 		json::array_t nested;
 		for (auto& n : m_nested) {
-			nested.emplace_back(n->hyperparams());
+			nested.emplace_back(n.nested->hyperparams());
+			//TODO: write n_dims_to_encode into Json
 		}
 
 		return {
@@ -290,8 +322,14 @@ private:
 	struct ForwardContext : public Context {
 		std::vector<std::unique_ptr<Context>> nested;
 	};
+	struct Nested
+	{
+		std::unique_ptr<Encoding<T>> nested;
+		int dim_start;
+		int num_dim;
+	};
 
-	std::vector<std::unique_ptr<Encoding<T>>> m_nested;
+	std::vector<Nested> m_nested;
 	uint32_t m_n_dims_to_encode;
 
 	MatrixLayout m_output_layout = AoS;
