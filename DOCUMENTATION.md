@@ -61,16 +61,23 @@ Multi-layer perceptron (MLP) based on [CUTLASS](https://github.com/NVIDIA/cutlas
 
 ### Composite
 
-Allows composing multiple encodings. The following example replicates the Neural Radiance Caching [[Müller et al. 2021]](https://tom94.net/data/publications/mueller21realtime/mueller21realtime.pdf) encoding by composing the `TriangleWave` encoding for the first 3 (spatial) dimensions, the `OneBlob` encoding for the following 5 non-linear appearance dimensions, and the `Identity` for all remaining dimensions.
+Allows composing multiple encodings. The following example replicates the Neural Radiance Caching [[Müller et al. 2021]](https://tom94.net/data/publications/mueller21realtime/mueller21realtime.pdf) encoding by composing the `TriangleWave` and `Identity` encoding for the first 3 (spatial) dimensions, the `OneBlob` encoding for the following 5 non-linear appearance dimensions, and another `Identity` for all remaining dimensions.
+
+The parameter `n_dims_to_encode` specifies which or how many input dimensions are encoded. If it is an array with exactly two dimensions, it specifies the dimensions using slice notation [start dimension inclusive, end dimension exclusive]. If it is a single integer, that many of input dimensions after the inputs handled by the previous encodings are processed.
+`n_dims_to_encode` can be omitted for the last encoding, this one then handles all remaining dimensions.
 
 ```json5
 {
 	"otype": "Composite",
 	"nested": [
 		{
-			"n_dims_to_encode": 3, // Spatial dims
+			"n_dims_to_encode": [0,3], // Spatial dims (slice or partition)
 			"otype": "TriangleWave",
 			"n_frequencies": 12
+		},
+		{
+			"n_dims_to_encode": [0,3], // Shares the same dimensions as the encoding above
+			"otype": "Identity"
 		},
 		{
 			"n_dims_to_encode": 5, // Non-linear appearance dims.

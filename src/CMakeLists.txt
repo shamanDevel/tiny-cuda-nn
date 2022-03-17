@@ -81,7 +81,6 @@ set(INCLUDE_FILES_LOSSES
 )
 set(INCLUDE_FILES_NETWORKS
     ../include/tiny-cuda-nn/networks/cutlass_mlp.h
-    ../include/tiny-cuda-nn/networks/cutlass_resnet.h
     ../include/tiny-cuda-nn/networks/fully_fused_mlp.h
 )
 set(INCLUDE_FILES_OPTIMIZERS
